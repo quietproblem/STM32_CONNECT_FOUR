@@ -1,0 +1,41 @@
+#include "Button_Driver.h"
+//void buttonInit()
+//{
+//	__HAL_RCC_GPIOA_CLK_ENABLE();
+//
+//	GPIO_InitTypeDef GPIO_BUTTON;
+//	GPIO_BUTTON.Pin=GPIO_PIN_0;
+//	GPIO_BUTTON.Mode=GPIO_MODE_INPUT;
+//	GPIO_BUTTON.Speed=GPIO_SPEED_FREQ_VERY_HIGH;
+//	GPIO_BUTTON.Pull=GPIO_MODE_OUTPUT_PP;
+//	HAL_GPIO_Init(GPIOA,&GPIO_BUTTON);
+//}
+
+
+
+bool buttonPressed()
+{
+	uint8_t value = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0);
+	return BUTTON_PRESSED&(value);
+
+}
+void buttonInitInterrupt()
+{
+	__HAL_RCC_GPIOA_CLK_ENABLE();
+	GPIO_InitTypeDef GPIO_BUTTON;
+	GPIO_BUTTON.Pin=GPIO_PIN_0;
+	GPIO_BUTTON.Mode=GPIO_MODE_IT_RISING;
+	GPIO_BUTTON.Speed=GPIO_SPEED_FREQ_VERY_HIGH;
+	GPIO_BUTTON.Pull=GPIO_MODE_INPUT;
+	HAL_GPIO_Init(GPIOA,&GPIO_BUTTON);
+	HAL_NVIC_EnableIRQ(EXTI0_IRQn);
+
+
+}
+
+
+
+
+
+
+
