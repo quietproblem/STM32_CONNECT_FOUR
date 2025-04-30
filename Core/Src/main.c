@@ -114,13 +114,11 @@ int main(void)
 	HAL_Delay(300);
 	LCD_PrintBoard();
 	uint32_t eventsToRun;
-	bool updated_board;
-	bool one_player_win;
 	int win;
 	while(1)
 	{
 		win=onePlayerMode();
-		updated_board=LCD_Touch_Move_Chip();
+		LCD_Touch_Move_Chip();
 
 //		if(updated_board)
 //		{
