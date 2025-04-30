@@ -7,6 +7,31 @@
 
 #include "ApplicationCode.h"
 
+RNG_HandleTypeDef hrng;
+
+void RNG_Init();
+
+//static void MX_RNG_Init(void);
+//static void MX_RNG_Init(void)
+//{
+//
+//	/* USER CODE BEGIN RNG_Init 0 */
+//
+//	/* USER CODE END RNG_Init 0 */
+//
+//	/* USER CODE BEGIN RNG_Init 1 */
+//
+//	/* USER CODE END RNG_Init 1 */
+//	hrng.Instance = RNG;
+//	if (HAL_RNG_Init(&hrng) != HAL_OK)
+//	{
+//		Error_Handler();
+//	}
+//	/* USER CODE BEGIN RNG_Init 2 */
+//
+//	/* USER CODE END RNG_Init 2 */
+//
+//}
 
 typedef struct
 {
@@ -20,10 +45,15 @@ typedef struct
 	int column_count[7] ;
 	int player;
 	pair last_drop;
+	int player_one_wins;
+	int player_two_wins;
+	int ties;
 	int current_position;
 	int remaining_moves;
 	int old_time;
 	int end_time;
+	int game_duration;
+	bool game_finished;
 }Game;
 Game game;
 
@@ -38,6 +68,7 @@ void ApplicationInit(void)
 {
 	initialise_monitor_handles(); // Allows printf functionality
 	buttonInitInterrupt();
+	RNG_Init();
 	LTCD__Init();
 	LTCD_Layer_Init(0);
 	LCD_Clear(0,LCD_COLOR_WHITE);
@@ -52,8 +83,114 @@ void ApplicationInit(void)
 #endif // COMPILE_TOUCH_FUNCTIONS
 }
 
+
+void RNG_Init()
+{
+	hrng.Instance = RNG;
+	HAL_RNG_Init(&hrng);
+}
+
 void displayTime()
 {
+	LCD_SetTextColor(LCD_COLOR_BLACK);
+	LCD_SetFont(&Font16x24);
+	LCD_DisplayChar(60,50,'W');
+	LCD_DisplayChar(80,50,'I');
+	LCD_DisplayChar(100,50,'N');
+	LCD_DisplayChar(120,50,'S');
+
+	char buffer[30];
+	LCD_SetTextColor(LCD_COLOR_YELLOW);
+	LCD_DisplayChar(60,80,'P');
+	LCD_DisplayChar(70,80,'1');
+	LCD_DisplayChar(80,80,':');
+
+	sprintf(buffer,"%d",game.player_one_wins);
+//	for(int i=0; i<30; i++)
+//	{
+//		buffer[i]='a';
+//	}
+	int x_pos=90;
+	int y_pos=80;
+	int index=0;
+	while(buffer[index]!='\0')
+	{
+		LCD_DisplayChar(x_pos, y_pos,buffer[index]);
+		index++;
+		x_pos+=15;
+	}
+
+	char buffer1[30];
+	LCD_SetTextColor(LCD_COLOR_RED);
+	LCD_DisplayChar(60,110,'P');
+	LCD_DisplayChar(70,110,'2');
+	LCD_DisplayChar(80,110,':');
+
+
+	sprintf(buffer1,"%d",game.player_two_wins);
+//	for(int i=0; i<30; i++)
+//	{
+//		buffer[i]='a';
+//	}
+	x_pos=90;
+	y_pos=110;
+	index=0;
+	while(buffer1[index]!='\0')
+	{
+		LCD_DisplayChar(x_pos, y_pos,buffer1[index]);
+		index++;
+		x_pos+=15;
+	}
+
+
+//	LCD_DisplayChar(60,100,'T');
+//	LCD_DisplayChar(80,100,'I');
+//	LCD_DisplayChar(100,100,'M');
+	LCD_SetTextColor(LCD_COLOR_BLACK);
+	LCD_DisplayChar(60,150,'T');
+	LCD_DisplayChar(80,150,'I');
+	LCD_DisplayChar(100,150,'M');
+	LCD_DisplayChar(120,150,'E');
+	LCD_DisplayChar(135,150,'R');
+
+	for(int i=0; i<30; i++)
+	{
+		buffer[i]='a';
+	}
+	game.end_time=HAL_GetTick()/1000;
+	int game_duration=game.end_time-game.old_time;
+	int minute=game_duration/60;
+	int second=game_duration%60;
+
+	if(second<10)
+	{
+		sprintf(buffer,"%d:0%d",minute,second);
+	} else {
+		sprintf(buffer,"%d:%d",minute,second);
+	}
+
+
+	x_pos=60;
+	y_pos=170;
+	index=0;
+	while(buffer[index]!='\0')
+	{
+		LCD_DisplayChar(x_pos, y_pos,buffer[index]);
+		index++;
+		x_pos+=15;
+	}
+
+	LCD_DisplayChar(60,230,'P');
+	LCD_DisplayChar(80,230,'L');
+	LCD_DisplayChar(100,230,'A');
+	LCD_DisplayChar(120,230,'Y');
+
+
+	LCD_DisplayChar(60,250,'A');
+	LCD_DisplayChar(80,250,'G');
+	LCD_DisplayChar(100,250,'A');
+	LCD_DisplayChar(120,250,'I');
+	LCD_DisplayChar(135,250,'N');
 
 }
 
@@ -69,6 +206,7 @@ void game_init()
 	}
 	game.remaining_moves=MAX_MOVES;
 	game.player_cnt=-1;
+	game.current_position=3;
 }
 void update_game_board()
 {
@@ -88,7 +226,7 @@ void update_game_board()
 	game.board[current_row_pos][column_position]=game.player;
 	game.last_drop.row=current_row_pos;
 	game.last_drop.column=column_position;
-	game.current_position=0;
+	game.current_position=3;
 
 	if(game.player==1)
 	{
@@ -118,10 +256,6 @@ int check_for_win()
 	{
 		old_player=1;
 	}
-	if(game.remaining_moves==0)
-	{
-		return TIE;
-	}
 	int current_count=1;
 	int current_row=game.last_drop.row;
 	int current_col=game.last_drop.column;
@@ -145,6 +279,16 @@ int check_for_win()
 	//WIN
 	if(current_count>=4)
 	{
+		game.game_finished=WIN;
+		if(old_player==1)
+		{
+			game.player_one_wins++;
+		}
+
+		else
+		{
+			game.player_two_wins++;
+		}
 		return WIN;
 	}
 
@@ -168,6 +312,16 @@ int check_for_win()
 
 	if(current_count>=4)
 	{
+		game.game_finished=WIN;
+		if(old_player==1)
+		{
+			game.player_one_wins++;
+		}
+
+		else
+		{
+			game.player_two_wins++;
+		}
 		return WIN;
 	}
 
@@ -194,7 +348,22 @@ int check_for_win()
 
 	if(current_count>=4)
 	{
+		game.game_finished=WIN;
+		if(old_player==1)
+		{
+			game.player_one_wins++;
+		}
+
+		else
+		{
+			game.player_two_wins++;
+		}
 		return WIN;
+		if(game.remaining_moves==0)
+		{
+			game.ties++;
+			return TIE;
+		}
 	}
 
 
@@ -223,18 +392,18 @@ int check_for_win()
 
 	if(current_count>=4)
 	{
+		game.game_finished=WIN;
+		if(old_player==1)
+		{
+			game.player_one_wins++;
+		}
+
+		else
+		{
+			game.player_two_wins++;
+		}
 		return WIN;
 	}
-
-	//work left until different color or boundary
-	//work right until different color or boundary
-
-	//work left and up until different color or boundary
-	//work right and down until different color or boundary
-
-	//work right and up until different color or boundary
-	//work left and down until different color or boundary
-
 	return NOT_FINISHED;
 }
 void LCD_Visual_Demo(void)
@@ -244,21 +413,49 @@ void LCD_Visual_Demo(void)
 
 #if COMPILE_TOUCH_FUNCTIONS == 1
 
+bool onePlayerMode()
+{
+	bool win=false;
+
+	if((game.player_cnt==1) && (game.player==2))
+	{
+		uint32_t random;
+
+		do
+		{
+			HAL_RNG_GenerateRandomNumber(&hrng, &random);
+			random=random%7;
+		}while(game.column_count[random]>=6);
+
+		game.current_position=random;
+		update_game_board();
+		LCD_PrintBoard();
+		win=check_for_win();
+		game.player=1;
+	}
+	return win;
+}
+
+
 int LCD_Touch_Move_Chip()
 {
 //	LCD_Clear(0,LCD_COLOR_WHITE);
+
+
+
 	LCD_Print_Chip(game.current_position,game.player);
 		if ((returnTouchStateAndLocation(&StaticTouchData) == STMPE811_State_Pressed) ){
 			/* Touch valid */
-			HAL_Delay(250);
+			HAL_Delay(100);
+			int white_color=3;
 //			LCD_Clear(0,LCD_COLOR_WHITE);
 			if(StaticTouchData.x<=120)
 			{
 				if(game.current_position-1>=0)
 				{
+					LCD_Print_Chip(game.current_position,white_color);
 					game.current_position--;
 				}
-				LCD_Clear(0,LCD_COLOR_WHITE);
 				LCD_Print_Chip(game.current_position,game.player);
 				return 1;
 			}
@@ -267,9 +464,9 @@ int LCD_Touch_Move_Chip()
 			{
 				if((game.current_position+1<=6))
 				{
+					LCD_Print_Chip(game.current_position,white_color);
 					game.current_position++;
 				}
-				LCD_Clear(0,LCD_COLOR_WHITE);
 				LCD_Print_Chip(game.current_position,game.player);
 				return 1;
 			}
@@ -285,6 +482,7 @@ void EXTI0_IRQHandler()
 	clearIRQPendingInterrupt(EXTI0_IRQn);
 	clearEXTIPendingInterrupt(EXTI0);
 	addScheduleEvent(DROP_CHIP_EVENT);
+
 	enableIRQInterrupt(EXTI0_IRQn);
 }
 
@@ -297,6 +495,7 @@ void LCD_Touch_Player_Count(void)
 
 	LCD_DisplayChar(40,140,'1');
 	LCD_DisplayChar(180,140,'2');
+
 
 	while(game.player_cnt==-1)
 	{
@@ -316,21 +515,27 @@ void LCD_Touch_Player_Count(void)
 		}
 	}
 	LCD_Clear(0,LCD_COLOR_WHITE);
+	game.old_time=HAL_GetTick()/1000;
 	return;
 }
 
 void LCD_PrintBoard()
 {
 	LCD_Clear(0,LCD_COLOR_WHITE);
-	for(int i=80;i<320;i+=40)
-	{
-		LCD_Draw_Horizontal_Line(0,i,240,LCD_COLOR_BLACK);
-	}
 
-	for(int i=0;i<240;i+=35)
+	for(int i=80;i<320;i++)
 	{
-		LCD_Draw_Vertical_Line(i,80,250,LCD_COLOR_BLACK);
+		LCD_Draw_Horizontal_Line(0,i,240,LCD_COLOR_BLUE);
 	}
+//	for(int i=80;i<320;i+=40)
+//	{
+//		LCD_Draw_Horizontal_Line(0,i,240,LCD_COLOR_BLACK);
+//	}
+//
+//	for(int i=0;i<240;i+=35)
+//	{
+//		LCD_Draw_Vertical_Line(i,80,250,LCD_COLOR_BLACK);
+//	}
 	for(int j=0;j<7;j++)
 	{
 		for(int i=0;i<6;i++)
@@ -348,9 +553,46 @@ void LCD_PrintBoard()
 			{
 				LCD_Draw_Circle_Fill(x_pos,y_pos,10,LCD_COLOR_RED);
 			}
+
+			else
+			{
+				LCD_Draw_Circle_Fill(x_pos,y_pos,10,LCD_COLOR_WHITE);
+			}
 		}
 	}
 	return;
+}
+
+bool getGameState()
+{
+	return game.game_finished;
+}
+
+void resetGame()
+{
+	for(;;)
+	{
+		if ((returnTouchStateAndLocation(&StaticTouchData) == STMPE811_State_Pressed) )
+		{
+			/* Touch valid */
+			for(int i=0; i<BOARD_ROWS;i++)
+			{
+				for(int j=0; j<BOARD_COLUMNS; j++)
+				{
+					game.board[i][j]=0;
+				}
+			}
+			game.remaining_moves=MAX_MOVES;
+			game.current_position=3;
+			for(int i =0; i<7; i++)
+			{
+				game.column_count[i]=0;
+			}
+			game.player=1;
+			game.old_time=HAL_GetTick()/1000;
+			break;
+		}
+	}
 }
 
 

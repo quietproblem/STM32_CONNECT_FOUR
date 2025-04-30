@@ -44,7 +44,7 @@ I2C_HandleTypeDef hi2c3;
 
 LTDC_HandleTypeDef hltdc;
 
-RNG_HandleTypeDef hrng;
+
 
 SPI_HandleTypeDef hspi5;
 
@@ -58,7 +58,7 @@ TIM_HandleTypeDef htim2;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_LTDC_Init(void);
-static void MX_RNG_Init(void);
+//static void MX_RNG_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_SPI5_Init(void);
 static void MX_I2C3_Init(void);
@@ -99,12 +99,13 @@ int main(void)
 	/* USER CODE END SysInit */
 
 	/* Initialize all configured peripherals */
-//	MX_GPIO_Init();
-//	MX_LTDC_Init();
-//	MX_RNG_Init();
-//	MX_TIM2_Init();
-//	MX_SPI5_Init();
-//	MX_I2C3_Init();
+	MX_GPIO_Init();
+	MX_LTDC_Init();
+	//MX_RNG_Init();
+//	HAL_RNG_Init(hrng);
+	MX_TIM2_Init();
+	MX_SPI5_Init();
+	MX_I2C3_Init();
 	/* USER CODE BEGIN 2 */
 	ApplicationInit(); // Initializes the LCD functionality
 	game_init();
@@ -114,39 +115,52 @@ int main(void)
 	LCD_PrintBoard();
 	uint32_t eventsToRun;
 	bool updated_board;
+	bool one_player_win;
 	int win;
 	while(1)
 	{
+		win=onePlayerMode();
 		updated_board=LCD_Touch_Move_Chip();
 
-		if(updated_board)
-		{
-			LCD_PrintBoard();
-		}
+//		if(updated_board)
+//		{
+//			LCD_PrintBoard();
+//		}
 
 		eventsToRun=getScheduledEvents();
 
 
-		if(eventsToRun&DROP_CHIP_EVENT)
+		if((eventsToRun&DROP_CHIP_EVENT))
 		{
 			update_game_board();
 			LCD_PrintBoard();
 			removeSchedulerEvent(DROP_CHIP_EVENT);
 			win=check_for_win();
 
-			if(win==WIN)
-			{
-				LCD_Clear(0,LCD_COLOR_BLUE);
-				break;
-			}
+		}
 
-			if(win==TIE)
-			{
-				LCD_Clear(0,LCD_COLOR_RED);
-				break;
-			}
+		if(win==WIN)
+		{
+			LCD_Clear(0,LCD_COLOR_BLUE);
+			HAL_Delay(100);
+//				LCD_PrintBoard();
+			displayTime();
+
+			resetGame();
+			LCD_PrintBoard();
+			continue;
+
+		}
+
+		if(win==TIE)
+		{
+			LCD_Clear(0,LCD_COLOR_RED);
+			displayTime();
+			resetGame();
 		}
 	}
+
+
 
 }
 
@@ -340,26 +354,26 @@ static void MX_LTDC_Init(void)
  * @param None
  * @retval None
  */
-static void MX_RNG_Init(void)
-{
-
-	/* USER CODE BEGIN RNG_Init 0 */
-
-	/* USER CODE END RNG_Init 0 */
-
-	/* USER CODE BEGIN RNG_Init 1 */
-
-	/* USER CODE END RNG_Init 1 */
-	hrng.Instance = RNG;
-	if (HAL_RNG_Init(&hrng) != HAL_OK)
-	{
-		Error_Handler();
-	}
-	/* USER CODE BEGIN RNG_Init 2 */
-
-	/* USER CODE END RNG_Init 2 */
-
-}
+//static void MX_RNG_Init(void)
+//{
+//
+//	/* USER CODE BEGIN RNG_Init 0 */
+//
+//	/* USER CODE END RNG_Init 0 */
+//
+//	/* USER CODE BEGIN RNG_Init 1 */
+//
+//	/* USER CODE END RNG_Init 1 */
+//	hrng.Instance = RNG;
+//	if (HAL_RNG_Init(&hrng) != HAL_OK)
+//	{
+//		Error_Handler();
+//	}
+//	/* USER CODE BEGIN RNG_Init 2 */
+//
+//	/* USER CODE END RNG_Init 2 */
+//
+//}
 
 /**
  * @brief SPI5 Initialization Function

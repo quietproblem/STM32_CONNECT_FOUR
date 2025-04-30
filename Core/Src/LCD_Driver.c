@@ -340,6 +340,11 @@ void LCD_Print_Chip(int position, int color)
 		LCD_Draw_Circle_Fill(x_position,y_position,10,LCD_COLOR_RED);
 	}
 
+	else
+	{
+		LCD_Draw_Circle_Fill(x_position,y_position,10,LCD_COLOR_WHITE);
+	}
+
 }
 
 /**
